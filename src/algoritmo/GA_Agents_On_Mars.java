@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -29,6 +30,17 @@ public class GA_Agents_On_Mars {
 
 	public static void main(String[] args) throws JMException, ClassNotFoundException, FileNotFoundException, IOException {
 		// TODO Auto-generated method stub
+		String dir = "";
+		try {
+			dir = PadraoAmbiental.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+			dir = dir.substring(0, dir.lastIndexOf("bin"));
+			dir = dir+"src"+System.getProperty("file.separator")+"simulador";
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+		
+		
 		Problem problem;
 		Algorithm ga;
 		Crossover crossover;
@@ -39,13 +51,13 @@ public class GA_Agents_On_Mars {
 		HashMap parametros;
 		
 		//Criando a instancia do problema
-		int weigth_of_vertices = 30;
+		int weigth_of_vertices = 200; //no simulador trabalha com o dobro, devido espelhamento. 
 		problem = new PadraoAmbiental(weigth_of_vertices);
 		
 		//instancia o algoritmo
 		ga = new GA(problem);
 		//Passagem de parametros ao algoritmo
-		ga.setInputParameter("tamPop", 2);
+		ga.setInputParameter("tamPop", 3);
 		ga.setInputParameter("maxEvaluations", 2);
 		
 		// Mutation and Crossover for Binary codification 
@@ -80,7 +92,7 @@ public class GA_Agents_On_Mars {
 	    
 	    /* Limpando arquivos*/
 	  
-	    ObjectInputStream in3 = new ObjectInputStream(new BufferedInputStream(new FileInputStream("//Users//david//Desktop//populationSimulation")));
+	    ObjectInputStream in3 = new ObjectInputStream(new BufferedInputStream(new FileInputStream(dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/target/arquivosMAPC/populationSimulation")));//"//Users//david//Desktop//populationSimulation")));
 		//HashMap<int[],String> copia3 = (HashMap<int[],String>) in3.readObject();
 		HashMap<Solution,String> popSim = (HashMap<Solution,String>) in3.readObject();
 		in3.close();
@@ -91,17 +103,19 @@ public class GA_Agents_On_Mars {
 			//XInt solution = new XInt(sol);
 			//ArrayInt sol2 = (ArrayInt)sol.getDecisionVariables()[0];
 			//System.out.println(Arrays.toString(sol2.array_)+" : "+copia3.get(sol)+"\n");
-			lista += popSim.get(sol).substring(0, 16)+"\n";
+			lista += popSim.get(sol).substring(0, (16/*15+1*/))+"\n";
 		}
 		//--------------------
 		//SALVANDO LISTA DE ARQUIVOS
-		BufferedWriter buffer = new BufferedWriter(new FileWriter(new File("//Users//david//Desktop//arquivosSim")));
+		BufferedWriter buffer = new BufferedWriter(new FileWriter(new File(dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/target/arquivosMAPC/arquivosSim")));//"//Users//david//Desktop//arquivosSim")));
 		buffer.write(lista);
 		buffer.flush();
 		buffer.close();
 		//DELETANDO ARQUIVOS DESNECESSARIOS
+		String dirGrafos=dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/target/arquivosMAPC/grafos";
+		String arqSim = dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/target/arquivosMAPC/arquivosSim";
 		Runtime run = Runtime.getRuntime();
-		Process p = run.exec("./src/scripts/deleteFile.sh");	
+		Process deleteFiles = run.exec("./src/scripts/deleteFile.sh "+dirGrafos+" "+arqSim);	
 	}
 
 }

@@ -1,5 +1,7 @@
 package algoritmo;
 
+//import GraphGenerator2013;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
@@ -13,6 +15,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -37,11 +40,15 @@ import jmetal.util.JMException;
 import jmetal.util.wrapper.XInt;
 
 public class PadraoAmbiental extends Problem{
-	private static final String URLSOLUTIONSIMULATION = "//Users//david//Desktop//solutionSimulation";
-	private static final String URLMASSIMBACKUP = "/Users/david/Downloads/massim-2014-2.0/massim/scripts/backup/";
-	private static final String URLARQPESOS = "//Users//david//Desktop//pesos.txt";
+	private static final String URLSOLUTIONSIMULATION = "massim-2014-2.0/massim/target/arquivosMAPC/solutionSimulation";//"//Users//david//Desktop//solutionSimulation";
+	private static final String URLMASSIMBACKUP = "massim-2014-2.0/massim/scripts/backup/";
+	private static final String URLARQPESOS = "massim-2014-2.0/massim/target/arquivosMAPC/pesos.txt";//"//Users//david//Desktop//pesos.txt";
+	private static final String TEAM1 = "lti_usp_2013_AT1";
+	//private static final String TEAM2 = "lti_usp_2013_2T10";
+	private static final String TEAM2 = "lti_usp_2013_2T6";
 	private double scoresA[];
 	private double scoresB[];
+	private String dir;
 	//public HashMap<int[],String> evaluationFiles;
 	public HashMap<Solution,String> evaluationFiles;
 	
@@ -49,7 +56,7 @@ public class PadraoAmbiental extends Problem{
 		solutionType_ = new ArrayIntSolutionType(this);
 		numberOfConstraints_ = 0;
 		numberOfObjectives_ = 1;
-		numberOfVariables_ = 30;//qtdVertices;
+		numberOfVariables_ = qtdVertices;
 		
 		lowerLimit_ = new double[qtdVertices];
 		upperLimit_ = new double[qtdVertices];
@@ -58,10 +65,19 @@ public class PadraoAmbiental extends Problem{
 			lowerLimit_[i] = 1;
 			upperLimit_[i] = 10;
 		}
+		try {
+			dir = PadraoAmbiental.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+			dir = dir.substring(0, dir.lastIndexOf("bin"));
+			dir = dir+"src"+System.getProperty("file.separator")+"simulador";
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		//evaluationFiles = new HashMap<int[],String>();
 		
 	}
+	
 	
 	@Override
 	public void evaluate(Solution arg0) throws JMException {
@@ -84,7 +100,7 @@ public class PadraoAmbiental extends Problem{
 		}
 		//Atividade 00 : criar arquivo de pesos para o simulador criar o mapa
 		try {
-			BufferedWriter bw = new BufferedWriter(new FileWriter(new File(URLARQPESOS)));
+			BufferedWriter bw = new BufferedWriter(new FileWriter(new File(dir+System.getProperty("file.separator")+URLARQPESOS)));
 			//Escreve a primeira parte dos vertices
 			for (int i = 0; i < numberOfVariables_; i++){
 				//System.out.println(weights[i]);
@@ -110,14 +126,19 @@ public class PadraoAmbiental extends Problem{
 		Date date = new Date();
 		String arqResult = dateFormat.format(date)+"-mapc-result.xml"; 
 		try {
-			Process execServer = run.exec("./src/scripts/script.sh");
+			//String dir = PadraoAmbiental.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+			//dir = dir.substring(0, dir.lastIndexOf("bin"));
+			//dir = dir+"src"+System.getProperty("file.separator")+"simulador";
+			//JOptionPane.showMessageDialog(null, dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/scripts");
+			Process execServer = run.exec("./src/scripts/script.sh "+dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/scripts");
 			Thread.sleep(5000);
-			Process execTimeA = run.exec("./src/scripts/scriptAnt.sh");
-			Process execTimeB = run.exec("./src/scripts/scriptAnt2.sh");
+			Process execTimeA = run.exec("./src/scripts/scriptAnt.sh "+dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/target/arquivosMAPC/teams/TEAMS_A/"+TEAM1);
+			Process execTimeB = run.exec("./src/scripts/scriptAnt2.sh "+dir+System.getProperty("file.separator")+"massim-2014-2.0/massim/target/arquivosMAPC/teams/TEAMS_B/"+TEAM2 +" "+(TEAM2+".jar"));
 			
 			//Pausa a execução até que a simulação termine
-			while ((execTimeA.isAlive())||(execTimeB.isAlive()))
-				Thread.sleep(10000);
+			while ((execTimeA.isAlive())||(execTimeB.isAlive())){
+				//Thread.sleep(30000);
+			}	
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -128,10 +149,35 @@ public class PadraoAmbiental extends Problem{
 		
 		//Atividade 02 : resgatar o valor de pontuação dos times por rounds.
 		
-		File file = new File(URLMASSIMBACKUP+arqResult);
+		File file = new File(dir+System.getProperty("file.separator")+URLMASSIMBACKUP+arqResult);
 		try {
-			lerArquivo(file);
+			scoresA = new double[2];//Registro dos Pontos do Time A por 2 matches
+			scoresB = new double[2];//Registro dos Pontos do Time B por 2 matches
+			int controle = 0;
+			int achouArquivo = 0;
+			while(controle < 2){
+				if (file.exists()){
+					lerArquivo(file);
+			     	System.out.println("Arquivo existe: "+file.getAbsolutePath());
+			     	achouArquivo = 1;
+			     	break;
+				}else{
+					Thread.sleep(120000);
+					//JOptionPane.showMessageDialog(null, "Arquivo não existe: "+file.getAbsolutePath());
+					System.out.println("Arquivo não existe: "+file.getAbsolutePath());
+					controle++;
+				}
+			}
+			if ((controle > 0) && (achouArquivo == 0)){
+				this.scoresA[0] = -1;
+				this.scoresB[0] = 1;
+				this.scoresA[0] = -1;
+				this.scoresB[0] = 1;
+			}
 		} catch (JDOMException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -145,9 +191,13 @@ public class PadraoAmbiental extends Problem{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//Atividade 03 : calcular o resultado da função f(x) = Sum (score_TimeAlvo / score_TimeAdversario).
-		double sumScoresA = scoresA[0] + scoresA[1] + scoresA[2] + scoresA[3];
-		double sumScoresB = scoresB[0] + scoresB[1] + scoresB[2] + scoresB[3];
+		//Atividade 03 : calcular o resultado da função f(x) = Sum (score_TimeAlvo) / sum(score_TimeAdversario).
+		double sumScoresA = 0.0;
+		double sumScoresB = 0.0;
+		for(int i = 0; i < scoresA.length; i++){
+			sumScoresA += scoresA[i];
+			sumScoresB += scoresB[i];
+		}
 		//atribuição da função objetivo
 		arg0.setObjective(0, (sumScoresA / sumScoresB));
 	}
@@ -168,8 +218,8 @@ public class PadraoAmbiental extends Problem{
 		List<Element> tag = elements.getChildren("match");
 		//Associar as tags às variáveis
 		Iterator<Element> i = tag.iterator();
-		scoresA = new double[4];
-		scoresB = new double[4];
+		//scoresA = new double[2];
+		//scoresB = new double[2];
 		
 		int ind = 0;
 		while (i.hasNext()){
@@ -199,7 +249,7 @@ public class PadraoAmbiental extends Problem{
 	public void salvaRegistroSimulacao(HashMap<Solution, String> dados) throws FileNotFoundException, IOException{
 		//JOptionPane.showMessageDialog(null, " Sem Erros");
 		
-		ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(URLSOLUTIONSIMULATION)));
+		ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(dir+System.getProperty("file.separator")+URLSOLUTIONSIMULATION)));
   
 		out.writeObject(dados);
 		out.flush();
@@ -208,10 +258,10 @@ public class PadraoAmbiental extends Problem{
 	}
 	
     public HashMap<Solution, String> historicSolution() throws FileNotFoundException, IOException, ClassNotFoundException{
-    		File file = new File(URLSOLUTIONSIMULATION);
+    		File file = new File(dir+System.getProperty("file.separator")+URLSOLUTIONSIMULATION);
     		
     		if (file.exists()){
-	    		ObjectInputStream in = new ObjectInputStream(new BufferedInputStream(new FileInputStream(URLSOLUTIONSIMULATION)));
+	    		ObjectInputStream in = new ObjectInputStream(new BufferedInputStream(new FileInputStream(dir+System.getProperty("file.separator")+URLSOLUTIONSIMULATION)));
 	    		//HashMap<int[],String> dados = (HashMap<int[],String>) in.readObject();
 	    		HashMap<Solution,String> dados = (HashMap<Solution,String>) in.readObject();
 	    		in.close();

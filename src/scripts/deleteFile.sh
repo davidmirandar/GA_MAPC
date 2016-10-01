@@ -1,7 +1,8 @@
 #!/bin/bash
 
-cd ~/Desktop/grafos
+cd $1
+#~/Desktop/grafos
 
-ls | grep -v -f ~/Desktop/arquivosSim > lista
+ls | grep -v -f $2 > lista #~/Desktop/arquivosSim > lista
 
 xargs -t -L1 rm -f < lista
